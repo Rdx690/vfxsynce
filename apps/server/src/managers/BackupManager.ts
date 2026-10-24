@@ -7,6 +7,7 @@ import {
   getSortedFilesWithPrefix,
   uploadJSON,
   validateAudioFileExists,
+  validateR2Config,
 } from "@/lib/r2";
 import { globalManager } from "@/managers/GlobalManager";
 import type { RoomBackupType, ServerBackupType } from "@/managers/RoomManager";
@@ -112,6 +113,13 @@ export class BackupManager {
    * Save the current server state to R2
    */
   static async backupState(): Promise<void> {
+    // Backups are optional; do not emit recurring S3 errors when R2 is not configured.
+    const r2Config = validateR2Config();
+    if (!r2Config.isValid) {
+      console.warn(`⏭️ Skipping state backup because R2 is not configured: ${r2Config.errors.join(", ")}`);
+      return;
+    }
+
     try {
       // Collect state from all rooms
       const rooms: ServerBackupType["data"]["rooms"] = {};
@@ -144,6 +152,12 @@ export class BackupManager {
    * Restore server state from the latest backup in R2
    */
   static async restoreState(): Promise<boolean> {
+    const r2Config = validateR2Config();
+    if (!r2Config.isValid) {
+      console.warn(`⏭️ Skipping state restore because R2 is not configured: ${r2Config.errors.join(", ")}`);
+      return false;
+    }
+
     try {
       console.log("🔍 Looking for state backups...");
 
@@ -244,6 +258,9 @@ export class BackupManager {
    * Clean up old backups (keep last N backups)
    */
   static async cleanupOldBackups(keepCount = 5): Promise<void> {
+    const r2Config = validateR2Config();
+    if (!r2Config.isValid) return;
+
     try {
       // Get all backup files sorted by name (newest first)
       const backupFiles = await getSortedFilesWithPrefix(this.BACKUP_PREFIX, ".json");
