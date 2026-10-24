@@ -2,5 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "bun install",
-  "buildCommand": "bun run --filter client build"
+  "buildCommand": "bun run --filter client build",
+  "outputDirectory": "apps/client/.next"
 }
