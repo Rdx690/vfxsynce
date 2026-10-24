@@ -10,7 +10,30 @@ type Song = {
   image: string;
   audio: string;
   duration: string;
+  local?: boolean;
+  offline?: boolean;
 };
+
+const DB_NAME = "sourajit-vfx-music-offline";
+const STORE_NAME = "tracks";
+function openMusicDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains(STORE_NAME)) request.result.createObjectStore(STORE_NAME, { keyPath: "id" }); };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+async function saveOffline(song: Song, blob: Blob) {
+  const db = await openMusicDB();
+  await new Promise<void>((resolve, reject) => { const tx = db.transaction(STORE_NAME, "readwrite"); tx.objectStore(STORE_NAME).put({ ...song, blob, offline: true }); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); });
+  db.close();
+}
+async function readOffline(): Promise<Array<Song & { blob: Blob }>> {
+  const db = await openMusicDB();
+  const rows = await new Promise<Array<Song & { blob: Blob }>>((resolve, reject) => { const req = db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).getAll(); req.onsuccess = () => resolve(req.result as Array<Song & { blob: Blob }>); req.onerror = () => reject(req.error); });
+  db.close(); return rows;
+}
 
 function pickText(value: unknown): string {
   if (typeof value === "string") return value;
@@ -96,7 +119,17 @@ export default function MusicPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [playing, setPlaying] = useState(false);
+  const [offlineSongs, setOfflineSongs] = useState<Song[]>([]);
+  const [savingOffline, setSavingOffline] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const localUrls = useRef<string[]>([]);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    readOffline().then((rows) => { if (active) setOfflineSongs(rows.map(({ blob: _blob, ...song }) => ({ ...song, offline: true }))); }).catch(() => {});
+    return () => { active = false; localUrls.current.forEach((url) => URL.revokeObjectURL(url)); };
+  }, []);
 
   const currentIndex = useMemo(() => songs.findIndex((song) => song.id === selected?.id), [songs, selected]);
 
@@ -127,14 +160,16 @@ export default function MusicPage() {
   async function playSong(song: Song) {
     setSelected(song);
     setNotice("");
-    if (!song.audio) {
+    let playableUrl = song.audio;
+    if (song.offline) { try { const cached = (await readOffline()).find((row) => row.id === song.id); if (cached) playableUrl = URL.createObjectURL(cached.blob); } catch {} }
+    if (!playableUrl) {
       setPlaying(false);
       setNotice("This result has no direct audio URL. Search results can show, but playback needs a playable URL from the API.");
       return;
     }
     const player = audioRef.current;
     if (!player) return;
-    if (player.src !== song.audio) player.src = song.audio;
+    if (player.src !== playableUrl) player.src = playableUrl;
     try {
       await player.play();
       setPlaying(true);
@@ -142,6 +177,29 @@ export default function MusicPage() {
       setPlaying(false);
       setNotice("This audio link could not be played in the browser. The provider may require a fresh URL or may block direct playback.");
     }
+  }
+
+  async function addLocalFiles(files: FileList | null) {
+    if (!files?.length) return;
+    const local = Array.from(files).filter((file) => file.type.startsWith("audio/") || /\\.(mp3|m4a|aac|wav|ogg|flac)$/i.test(file.name)).map((file, index) => {
+      const url = URL.createObjectURL(file); localUrls.current.push(url);
+      return { id: `local-${file.name}-${file.lastModified}-${index}`, title: file.name.replace(/\\.[^.]+$/, ""), artist: "Device file", album: "Local music", image: "", audio: url, duration: "", local: true } as Song;
+    });
+    if (!local.length) { setError("Select audio files such as MP3, M4A, AAC, WAV, or OGG."); return; }
+    setSongs((current) => [...local, ...current]); setError(""); setNotice(`${local.length} device audio file(s) added. They play directly from your phone.`);
+  }
+  async function saveCurrentOffline() {
+    if (!selected) return;
+    if (selected.local || selected.offline) { setNotice("This track is already on your device."); return; }
+    if (!selected.audio) { setNotice("This result has no direct audio URL, so it cannot be saved offline."); return; }
+    setSavingOffline(true); setError(""); setNotice("Downloading audio for offline playback…");
+    try {
+      const response = await fetch(selected.audio); if (!response.ok) throw new Error("Download failed. The provider may block saving this audio.");
+      const blob = await response.blob(); if (blob.size < 1024) throw new Error("The API did not return a valid audio file.");
+      await saveOffline(selected, blob); setOfflineSongs((current) => [{ ...selected, offline: true }, ...current.filter((item) => item.id !== selected.id)]);
+      setNotice("Saved on this device. Open Offline Music to play it without internet.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save this track offline."); }
+    finally { setSavingOffline(false); }
   }
 
   function skip(direction: number) {
@@ -192,7 +250,8 @@ export default function MusicPage() {
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search song, artist, album..." aria-label="Search music" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-600" />
               <button type="submit" disabled={loading} className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-bold transition hover:bg-violet-400 disabled:opacity-60">{loading ? "Searching…" : "Search"}</button>
             </form>
-            <div className="mt-4 flex flex-wrap gap-2">{starterSearches.map((item) => <button key={item} onClick={() => { setQuery(item); void search(item); }} className="rounded-full border border-white/10 px-3 py-2 text-xs text-zinc-400 transition hover:border-violet-300/40 hover:text-white">{item}</button>)}</div>
+            <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-full border border-cyan-300/30 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-100">＋ Add music from phone</button>{starterSearches.map((item) => <button key={item} onClick={() => { setQuery(item); void search(item); }} className="rounded-full border border-white/10 px-3 py-2 text-xs text-zinc-400 transition hover:border-violet-300/40 hover:text-white">{item}</button>)}</div>
+            <input ref={fileInputRef} type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac" multiple className="hidden" onChange={(e) => { void addLocalFiles(e.target.files); e.currentTarget.value = ""; }} />
             {error && <p role="alert" className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</p>}
             {notice && <p role="status" className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">{notice}</p>}
           </div>
@@ -205,7 +264,7 @@ export default function MusicPage() {
               </div>
               <div className="text-center"><h2 className="truncate text-xl font-bold">{selected?.title ?? "Choose your soundtrack"}</h2><p className="mt-1 truncate text-sm text-zinc-400">{selected?.artist ?? "Your next favourite starts here"}</p></div>
               <div className="mt-6 flex items-center justify-center gap-7"><button onClick={() => skip(-1)} aria-label="Previous song" className="text-2xl text-zinc-400 hover:text-white">↶</button><button onClick={() => { const player = audioRef.current; if (!player) return; if (player.paused) { if (selected) void playSong(selected); } else player.pause(); }} aria-label={playing ? "Pause" : "Play"} className="grid h-14 w-14 place-items-center rounded-full bg-white text-xl text-black shadow-lg shadow-white/10 transition hover:scale-105">{playing ? "Ⅱ" : "▶"}</button><button onClick={() => skip(1)} aria-label="Next song" className="text-2xl text-zinc-400 hover:text-white">↷</button></div>
-              <p className="mt-5 text-center text-[11px] text-zinc-500">Playback requires a valid, browser-playable audio URL.</p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2"><button onClick={() => void saveCurrentOffline()} disabled={!selected || savingOffline || selected.local || selected.offline} className="rounded-full border border-violet-300/30 px-4 py-2 text-xs font-semibold text-violet-100 disabled:opacity-40">{savingOffline ? "Saving…" : selected?.offline ? "✓ Saved offline" : "↓ Save offline"}</button><button onClick={() => setSongs(offlineSongs)} className="rounded-full border border-white/10 px-4 py-2 text-xs text-zinc-300">Offline Music ({offlineSongs.length})</button></div><p className="mt-3 text-center text-[11px] text-zinc-500">Device files and saved tracks play offline in this browser.</p>
             </div>
           </div>
         </section>
@@ -217,7 +276,7 @@ export default function MusicPage() {
         <footer className="border-t border-white/10 py-5 text-center text-xs text-zinc-600">SOURAJIT VFX · MUSIC VAULT X · Built for the vibe.</footer>
       </div>
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-[#0b0b12]/90 px-4 py-3 backdrop-blur-2xl">
-        <div className="mx-auto flex max-w-7xl items-center gap-3"><div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-white/5">{selected?.image ? <img src={selected.image} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center">♫</div>}</div><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold">{selected?.title ?? "Nothing playing"}</p><p className="truncate text-[10px] text-zinc-500">{selected?.artist ?? "Search and select a track"}</p></div><button onClick={() => { const player = audioRef.current; if (!player) return; if (player.paused) { if (selected) void playSong(selected); } else player.pause(); }} className="grid h-10 w-10 place-items-center rounded-full bg-violet-500 text-sm font-bold disabled:opacity-50" disabled={!selected?.audio} aria-label={playing ? "Pause music" : "Play music"}>{playing ? "Ⅱ" : "▶"}</button></div>
+        <div className="mx-auto flex max-w-7xl items-center gap-3"><div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-white/5">{selected?.image ? <img src={selected.image} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center">♫</div>}</div><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold">{selected?.title ?? "Nothing playing"}</p><p className="truncate text-[10px] text-zinc-500">{selected?.artist ?? "Search and select a track"}</p></div><button onClick={() => { const player = audioRef.current; if (!player) return; if (player.paused) { if (selected) void playSong(selected); } else player.pause(); }} className="grid h-10 w-10 place-items-center rounded-full bg-violet-500 text-sm font-bold disabled:opacity-50" disabled={!selected?.audio && !selected?.local && !selected?.offline} aria-label={playing ? "Pause music" : "Play music"}>{playing ? "Ⅱ" : "▶"}</button></div>
       </div>
       <audio ref={audioRef} onError={() => { setPlaying(false); setNotice("Playback failed for this audio URL. Try another result; the API may provide metadata without a playable stream."); }} className="hidden" />
     </main>
