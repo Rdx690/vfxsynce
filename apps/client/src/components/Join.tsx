@@ -364,6 +364,9 @@ export const Join = () => {
 
         {/* Active Rooms Section */}
         <ActiveRooms />
+        <footer className="mt-7 text-center text-[11px] tracking-wide text-slate-500">
+          Branding by <a href="https://github.com/Rdx690" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text font-semibold text-transparent transition-opacity hover:opacity-80">SOURAJIT VFX</a>
+        </footer>
       </div>
     </motion.div>
   );
