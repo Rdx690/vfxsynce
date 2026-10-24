@@ -113,6 +113,7 @@ const starterSearches = ["Arijit Singh", "Trending Hindi", "Lo-fi", "Punjabi hit
 
 export default function MusicPage() {
   const [query, setQuery] = useState("");
+  const [roomCode, setRoomCode] = useState("");
   const [songs, setSongs] = useState<Song[]>([]);
   const [selected, setSelected] = useState<Song | null>(null);
   const [loading, setLoading] = useState(false);
@@ -240,6 +241,16 @@ export default function MusicPage() {
           <a href="/" className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-300 transition hover:border-violet-300/50 hover:text-white">← VFX SYNC</a>
         </header>
 
+        <section className="mt-6 rounded-2xl border border-violet-300/20 bg-violet-400/[0.06] p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="text-xs font-bold tracking-[0.2em] text-violet-300">LISTEN TOGETHER</p><h2 className="mt-1 text-lg font-bold">Create or join a room</h2><p className="mt-1 text-xs text-zinc-400">Create a room code, then share the room link with friends.</p></div>
+            <button type="button" onClick={() => { const id = String(Math.floor(100000 + Math.random() * 900000)); window.location.href = `/room/${id}`; }} className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-bold hover:bg-violet-400">＋ Create Room</button>
+          </div>
+          <form className="mt-4 flex gap-2" onSubmit={(e) => { e.preventDefault(); const code = roomCode.trim(); if (/^\d{6}$/.test(code)) window.location.href = `/room/${code}`; else setError("Enter a valid 6-digit room code."); }}>
+            <input inputMode="numeric" maxLength={6} value={roomCode} onChange={(e) => setRoomCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="Enter 6-digit room code" aria-label="Room code" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-violet-300/50" />
+            <button type="submit" className="rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold hover:bg-white/10">Join Room</button>
+          </form>
+        </section>
         <section className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[1.05fr_.95fr] lg:py-16">
           <div>
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-violet-400/10 px-3 py-1.5 text-xs text-violet-200"><span className="h-2 w-2 rounded-full bg-emerald-400" /> YOUR SOUND, YOUR SPACE</div>
