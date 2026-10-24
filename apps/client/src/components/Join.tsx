@@ -84,15 +84,15 @@ export const Join = () => {
 
   return (
     <motion.div
-      className="relative min-h-dvh overflow-hidden bg-[#070914] text-white"
+      className="relative min-h-dvh overflow-hidden bg-gradient-to-br from-[#f8faff] via-[#f3f0ff] to-[#eafcff] text-slate-900"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-48 left-1/2 h-[28rem] w-[38rem] -translate-x-1/2 rounded-full bg-violet-600/15 blur-[110px]" />
-        <div className="absolute -bottom-48 -left-24 h-[24rem] w-[24rem] rounded-full bg-cyan-500/10 blur-[100px]" />
-        <div className="absolute inset-0 opacity-[0.14] [background-image:linear-gradient(rgba(255,255,255,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.055)_1px,transparent_1px)] [background-size:44px_44px] [mask-image:linear-gradient(to_bottom,black,transparent_80%)]" />
+        <div className="absolute -top-48 left-1/2 h-[28rem] w-[38rem] -translate-x-1/2 rounded-full bg-violet-400/25 blur-[110px]" />
+        <div className="absolute -bottom-48 -left-24 h-[24rem] w-[24rem] rounded-full bg-cyan-400/25 blur-[100px]" />
+        <div className="absolute inset-0 opacity-[0.14] [background-image:linear-gradient(rgba(99,102,241,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.07)_1px,transparent_1px)] [background-size:44px_44px] [mask-image:linear-gradient(to_bottom,black,transparent_80%)]" />
       </div>
       {/* <AnnouncementBanner /> */}
       <div className="relative z-10 w-full px-4 pb-12 pt-12 sm:pt-16 lg:px-1 max-w-[30rem] mx-auto">
@@ -102,17 +102,17 @@ export const Join = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
         >
-          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] shadow-[0_0_45px_rgba(139,92,246,0.18)] backdrop-blur-xl">
+          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-white/80 bg-white/75 shadow-[0_12px_40px_rgba(99,102,241,0.16)] backdrop-blur-xl">
             <AudioLines className="size-7 text-cyan-300" strokeWidth={1.7} />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-semibold tracking-[-0.06em] text-white">VFX <span className="bg-gradient-to-r from-violet-300 via-fuchsia-200 to-cyan-300 bg-clip-text text-transparent">SYNC</span></span>
-            <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-2 py-0.5 text-[9px] font-semibold tracking-[0.18em] text-cyan-200">LIVE AUDIO</span>
+            <span className="text-2xl font-semibold tracking-[-0.06em] text-slate-900">VFX <span className="bg-gradient-to-r from-violet-300 via-fuchsia-200 to-cyan-300 bg-clip-text text-transparent">SYNC</span></span>
+            <span className="rounded-full border border-violet-300/60 bg-violet-100 px-2 py-0.5 text-[9px] font-semibold tracking-[0.18em] text-violet-700">LIVE AUDIO</span>
           </div>
-          <p className="mt-3 max-w-xs text-sm leading-6 text-slate-400">Your devices. One beat. Perfectly in sync.</p>
+          <p className="mt-3 max-w-xs text-sm leading-6 text-slate-600">Your devices. One beat. Perfectly in sync.</p>
         </motion.header>
         <motion.div
-          className="mx-auto flex flex-col items-center justify-center rounded-[28px] border border-white/[0.09] bg-slate-950/70 p-6 shadow-[0_28px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.03] backdrop-blur-2xl sm:p-8"
+          className="mx-auto flex flex-col items-center justify-center rounded-[28px] border border-white/90 bg-white/80 p-6 shadow-[0_28px_100px_rgba(99,102,241,0.14)] ring-1 ring-white/70 backdrop-blur-2xl sm:p-8"
           initial={{ opacity: 0, y: 10, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
@@ -128,13 +128,13 @@ export const Join = () => {
                 <motion.div className="size-2 bg-green-500 rounded-full" />
                 <motion.div className="absolute size-2.5 bg-green-500/30 rounded-full animate-ping" />
               </motion.div>
-              <span className="text-xs text-neutral-500 ml-0.5">
+              <span className="text-xs text-slate-500 ml-0.5">
                 {numActiveUsers} {numActiveUsers === 1 ? "person" : "people"} listening now
               </span>
             </motion.div>
           ) : null}
           <motion.h2
-            className="mb-1 text-lg font-semibold tracking-tight text-white"
+            className="mb-1 text-lg font-semibold tracking-tight text-slate-900"
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.13 }}
@@ -143,7 +143,7 @@ export const Join = () => {
           </motion.h2>
 
           <motion.p
-            className="mb-6 max-w-xs text-center text-sm leading-6 text-slate-400"
+            className="mb-6 max-w-xs text-center text-sm leading-6 text-slate-600"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.15 }}
@@ -194,8 +194,8 @@ export const Join = () => {
                         <InputOTPSlot
                           key={index}
                           index={index}
-                          className="w-9 h-10 text-base bg-neutral-800/80 border-neutral-700 transition-all duration-200 
-                          focus-within:border-primary/70 focus-within:bg-neutral-800 focus-within:ring-1 focus-within:ring-primary/30"
+                          className="w-9 h-10 text-base bg-white border-violet-200 text-slate-900 transition-all duration-200 
+                          focus-within:border-primary/70 focus-within:bg-violet-50 focus-within:ring-1 focus-within:ring-primary/30"
                         />
                       ))}
                     </InputOTPGroup>
@@ -219,7 +219,7 @@ export const Join = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.25 }}
             >
-              <div className="text-sm text-neutral-400">
+              <div className="text-sm text-slate-600">
                 You&apos;ll join as{" "}
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.span
@@ -249,7 +249,7 @@ export const Join = () => {
                 type="button"
                 onClick={handleRegenerateName}
                 variant="ghost"
-                className="text-xs text-neutral-500 hover:text-neutral-300 ml-2 h-6 px-2"
+                className="text-xs text-slate-500 hover:text-violet-700 ml-2 h-6 px-2"
                 disabled={isJoining || isCreating}
               >
                 Regenerate
