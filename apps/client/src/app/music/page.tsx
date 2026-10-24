@@ -211,6 +211,33 @@ export default function MusicPage() {
   }
 
   useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    const session = navigator.mediaSession;
+    if (selected) {
+      try {
+        session.metadata = new MediaMetadata({
+          title: selected.title,
+          artist: selected.artist,
+          album: selected.album || "SOURAJIT VFX Music Vault",
+          artwork: selected.image ? [{ src: selected.image, sizes: "512x512", type: "image/jpeg" }] : [],
+        });
+      } catch {}
+    }
+    session.playbackState = playing ? "playing" : "paused";
+    const safeSet = (action: MediaSessionAction, handler: MediaSessionActionHandler | null) => {
+      try { session.setActionHandler(action, handler); } catch {}
+    };
+    safeSet("play", () => { if (selected) void playSong(selected); });
+    safeSet("pause", () => audioRef.current?.pause());
+    safeSet("previoustrack", () => skip(-1));
+    safeSet("nexttrack", () => skip(1));
+    return () => {
+      safeSet("play", null); safeSet("pause", null);
+      safeSet("previoustrack", null); safeSet("nexttrack", null);
+    };
+  }, [selected, playing, songs, currentIndex]);
+
+  useEffect(() => {
     const player = audioRef.current;
     if (!player) return;
     const onPlay = () => setPlaying(true);
@@ -289,7 +316,7 @@ export default function MusicPage() {
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-[#0b0b12]/90 px-4 py-3 backdrop-blur-2xl">
         <div className="mx-auto flex max-w-7xl items-center gap-3"><div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-white/5">{selected?.image ? <img src={selected.image} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center">♫</div>}</div><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold">{selected?.title ?? "Nothing playing"}</p><p className="truncate text-[10px] text-zinc-500">{selected?.artist ?? "Search and select a track"}</p></div><button onClick={() => { const player = audioRef.current; if (!player) return; if (player.paused) { if (selected) void playSong(selected); } else player.pause(); }} className="grid h-10 w-10 place-items-center rounded-full bg-violet-500 text-sm font-bold disabled:opacity-50" disabled={!selected?.audio && !selected?.local && !selected?.offline} aria-label={playing ? "Pause music" : "Play music"}>{playing ? "Ⅱ" : "▶"}</button></div>
       </div>
-      <audio ref={audioRef} onError={() => { setPlaying(false); setNotice("Playback failed for this audio URL. Try another result; the API may provide metadata without a playable stream."); }} className="hidden" />
+      <audio ref={audioRef} preload="auto" playsInline onError={() => { setPlaying(false); setNotice("Playback failed for this audio URL. Try another result; the API may provide metadata without a playable stream."); }} className="hidden" />
     </main>
   );
 }
